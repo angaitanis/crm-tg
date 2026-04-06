@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM — ΤΓ Νότιος Τομέας</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{--bg:#0f1117;--bg2:#171b26;--bg3:#1e2333;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);--text:#e8eaf0;--text2:#8b90a0;--text3:#555a6b;--accent:#4f8ef7;--accent2:#2d5fd4;--green:#34c97a;--amber:#f5a623;--red:#e84040;--purple:#9b6bff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.login-box{width:360px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:40px;}
+.login-logo{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;}
+.login-title{font-size:22px;font-weight:600;margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:32px;}
+.field-label{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.field-wrap{margin-bottom:16px;}
+input,textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+select option{background:var(--bg3);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:8px;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;}
+.btn-primary{background:var(--accent);color:#fff;width:100%;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{background:var(--bg3);color:var(--text);}
+.btn-danger{background:rgba(232,64,64,.12);color:var(--red);border:1px solid rgba(232,64,64,.3);}
+.btn-danger:hover{background:rgba(232,64,64,.2);}
+.btn-success{background:rgba(52,201,122,.12);color:var(--green);border:1px solid rgba(52,201,122,.3);}
+.btn-success:hover{background:rgba(52,201,122,.2);}
+.btn-amber{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.3);}
+.btn-amber:hover{background:rgba(245,166,35,.2);}
+.login-error{color:var(--red);font-size:12px;margin-top:10px;text-align:center;}
+#appScreen{display:none;min-height:100vh;flex-direction:column;}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-brand{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;}
+.topbar-divider{width:1px;height:16px;background:var(--border2);}
+.topbar-title{font-size:13px;font-weight:500;color:var(--text2);}
+.statsbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;}
+.stat-item{display:flex;align-items:baseline;gap:6px;}
+.stat-num{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:500;}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;}
+.stat-div{width:1px;height:20px;background:var(--border);}
+.toolbar{padding:12px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-wrap input{padding-left:36px;}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;}
+.filter-select{width:auto;min-width:160px;}
+/* MULTI-SELECT */
+.ms-wrap{position:relative;display:inline-block;}
+.ms-btn{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap;min-width:150px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'IBM Plex Sans',sans-serif;}
+.ms-btn:hover{background:var(--bg2);color:var(--text);}
+.ms-btn.active-filter{border-color:var(--accent);color:var(--accent);}
+.ms-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;z-index:500;min-width:210px;max-height:280px;overflow-y:auto;padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.ms-dd.open{display:block;}
+.ms-opt{display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:pointer;font-size:13px;color:var(--text2);}
+.ms-opt:hover{background:var(--bg3);color:var(--text);}
+.ms-opt input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+.ms-clear-btn{padding:7px 14px;font-size:11px;color:var(--accent);cursor:pointer;border-top:1px solid var(--border);margin-top:4px;display:block;}
+.ms-clear-btn:hover{color:var(--text);}
+/* BULK BAR */
+.bulk-bar{background:rgba(79,142,247,.1);border-bottom:1px solid rgba(79,142,247,.3);padding:10px 20px;display:none;align-items:center;gap:12px;}
+.bulk-bar.visible{display:flex;}
+.bulk-count{font-size:13px;color:var(--accent);font-weight:500;}
+/* TABLE */
+.table-container{flex:1;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{background:var(--bg2);padding:10px 12px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+thead th:hover{color:var(--text2);}
+thead th.no-sort{cursor:default;}
+tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+tbody tr:hover{background:var(--bg2);}
+tbody tr.sel-row{background:rgba(79,142,247,.08);}
+tbody tr.dnc{opacity:0.6;border-left:3px solid var(--red);}
+tbody tr.pyrinas-row td{color:#34c97a !important;}
+tbody tr.pyrinas-row .td-name{color:#34c97a !important;font-weight:600;}
+tbody tr.isos-pyrinas-row td{color:#4f8ef7 !important;}
+tbody tr.isos-pyrinas-row .td-name{color:#4f8ef7 !important;}
+tbody tr.vip-row td{color:#f5a623 !important;}
+tbody tr.vip-row .td-name{color:#f5a623 !important;font-weight:600;}
+td{padding:10px 12px;color:var(--text);vertical-align:middle;white-space:nowrap;}
+.td-name{font-weight:500;}
+.td-mono{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text2);}
+.cb{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
+/* PAGINATION */
+.pagination{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-top:1px solid var(--border);}
+.pag-info{font-size:12px;color:var(--text3);font-family:'IBM Plex Mono',monospace;}
+.pag-btns{display:flex;gap:6px;}
+.pag-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;}
+.pag-btn:hover{background:var(--bg3);}
+.pag-btn:disabled{opacity:.3;cursor:not-allowed;}
+/* DRAWER */
+.drawer-overlay{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.6);z-index:200;}
+.drawer-overlay.open{display:block;}
+.drawer{position:fixed;top:0;right:-520px;width:520px;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);z-index:201;overflow-y:auto;transition:right .25s ease;display:flex;flex-direction:column;}
+.drawer.open{right:0;}
+.drawer-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.drawer-avatar{width:48px;height:48px;border-radius:10px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--accent);flex-shrink:0;font-family:'IBM Plex Mono',monospace;}
+.drawer-name{font-size:18px;font-weight:600;margin-bottom:2px;}
+.drawer-sub{font-size:12px;color:var(--text2);}
+.drawer-close{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:4px;line-height:1;}
+.drawer-close:hover{color:var(--text);}
+.drawer-body{padding:20px 24px;flex:1;}
+.drawer-section{margin-bottom:24px;}
+.drawer-section-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px;}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+.info-row:last-child{border-bottom:none;}
+.info-key{font-size:12px;color:var(--text2);}
+.info-val{font-size:13px;font-weight:500;text-align:right;}
+.drawer-actions{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.hist-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;}
+.hist-date{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent);margin-bottom:4px;}
+.hist-note{font-size:13px;line-height:1.5;}
+/* MODALS */
+.modal-overlay{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.7);z-index:300;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.modal-title{font-size:16px;font-weight:600;}
+.modal-body{padding:20px 24px;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text3);font-size:13px;gap:10px;}
+.spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3);}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-size:13px;z-index:999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{border-color:rgba(52,201,122,.4);color:var(--green);}
+.toast.error{border-color:rgba(232,64,64,.4);color:var(--red);}
+.user-badge{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;}
+@media(max-width:640px){.drawer{width:100%;right:-100%;}.hide-mobile{display:none;}.form-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">CRM System</div>
+    <div class="login-title">ΤΓ Νότιος Τομέας</div>
+    <div class="login-sub">Σύνδεση στο σύστημα διαχείρισης επαφών</div>
+    <div class="field-wrap">
+      <div class="field-label">Email</div>
+      <input type="text" id="loginEmail" placeholder="email@example.com">
+    </div>
+    <div class="field-wrap">
+      <div class="field-label">Κωδικός</div>
+      <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Είσοδος</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="appScreen">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="topbar-brand">CRM</span>
+      <div class="topbar-divider"></div>
+      <span class="topbar-title">ΤΓ Νότιος Τομέας</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="user-badge" id="userBadge"></span>
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="doLogout()">Έξοδος</button>
+    </div>
+  </div>
+
+  <div class="statsbar">
+    <div class="stat-item"><span class="stat-num" id="statTotal">—</span><span class="stat-label">Σύνολο</span></div>
+    <div class="stat-div"></div>
+    <div class="stat-item"><span class="stat-num" id="statFiltered">—</span><span class="stat-label">Αποτελέσματα</span></div>
+    <div class="stat-div"></div>
+    <div class="stat-item"><span class="stat-num" id="statDimoi">—</span><span class="stat-label">Δήμοι</span></div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;" onclick="exportCSV()">↓ Εξαγωγή CSV</button>
+      <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;" onclick="exportPhones()">📞 Εξαγωγή Κινητών</button>
+      <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;" onclick="openExportGiortes()">🎂 Εξαγωγή τηλ γιορτές</button>
+<div id="giortesPanel" style="display:none;position:fixed;top:80px;right:20px;width:420px;max-height:80vh;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:20px;z-index:9999;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <span style="font-size:15px;font-weight:600;">🎂 Εξαγωγή τηλ γιορτές</span>
+    <button onclick="document.getElementById('giortesPanel').style.display='none'" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;">×</button>
+  </div>
+  <input type="text" id="giortesSearch2" placeholder="Αναζήτηση ονόματος..." oninput="filterGiortesNames2()" style="width:100%;margin-bottom:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;">
+  <div style="display:flex;gap:8px;margin-bottom:10px;">
+    <button onclick="selectAllGiortes2()" class="btn btn-ghost" style="font-size:12px;padding:5px 10px;">Επιλογή όλων</button>
+    <button onclick="clearAllGiortes2()" class="btn btn-ghost" style="font-size:12px;padding:5px 10px;">Καθαρισμός</button>
+  </div>
+  <div id="giortesNames2" style="max-height:300px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 0;margin-bottom:10px;"></div>
+  <p style="font-size:12px;color:var(--text3);margin-bottom:12px;" id="giortesCount2"></p>
+  <button onclick="exportGiortes2()" class="btn btn-primary" style="width:100%;">↓ Εξαγωγή CSV</button>
+</div>
+      <button class="btn btn-success" style="padding:6px 14px;font-size:12px;" onclick="openNewContact()">+ Νέα επαφή</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3 3"/></svg>
+      <input type="text" id="searchInput" placeholder="Αναζήτηση..." oninput="applyFilters()">
+    </div>
+    <select class="filter-select" id="searchScope" onchange="applyFilters()" style="min-width:180px;">
+      <option value="eponimo">Επώνυμο</option>
+      <option value="onoma">Όνομα</option>
+      <option value="name">Επώνυμο + Όνομα</option>
+      <option value="kim">Κινητοποιητής</option>
+      <option value="phone">Τηλέφωνο</option>
+      <option value="tk">Ταχ. Κώδικας</option>
+      <option value="all">Όλα τα πεδία</option>
+    </select>
+    <div class="ms-wrap">
+      <button class="ms-btn" id="btnDimos" onclick="toggleMs('Dimos')">Δήμος <span id="spDimos">▾</span></button>
+      <div class="ms-dd" id="msDimos"></div>
+    </div>
+    <div class="ms-wrap">
+      <button class="ms-btn" id="btnKim" onclick="toggleMs('Kim')">Κινητοποιητής <span id="spKim">▾</span></button>
+      <div class="ms-dd" id="msKim"></div>
+    </div>
+    <div class="ms-wrap">
+      <button class="ms-btn" id="btnStasi" onclick="toggleMs('Stasi')">Στάση <span id="spStasi">▾</span></button>
+      <div class="ms-dd" id="msStasi">
+        <label class="ms-opt"><input type="checkbox" value="ΔΑ" onchange="onMsChange('Stasi')"> ΔΑ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΤΥΠΙΚΟΣ" onchange="onMsChange('Stasi')"> ΤΥΠΙΚΟΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΤΥΠΙΚΗ" onchange="onMsChange('Stasi')"> ΤΥΠΙΚΗ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΘΕΤΙΚΟΣ" onchange="onMsChange('Stasi')"> ΘΕΤΙΚΟΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΘΕΤΙΚΗ" onchange="onMsChange('Stasi')"> ΘΕΤΙΚΗ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΘΕΡΜΟΣ" onchange="onMsChange('Stasi')"> ΘΕΡΜΟΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΘΕΡΜΗ" onchange="onMsChange('Stasi')"> ΘΕΡΜΗ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΠΟΛΥ ΘΕΡΜΟΣ" onchange="onMsChange('Stasi')"> ΠΟΛΥ ΘΕΡΜΟΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΠΟΛΥ ΘΕΡΜΗ" onchange="onMsChange('Stasi')"> ΠΟΛΥ ΘΕΡΜΗ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΑΔΙΑΦΟΡΟΣ" onchange="onMsChange('Stasi')"> ΑΔΙΑΦΟΡΟΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΑΔΙΑΦΟΡΗ" onchange="onMsChange('Stasi')"> ΑΔΙΑΦΟΡΗ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΑΡΝΗΤΙΚΟΣ" onchange="onMsChange('Stasi')"> ΑΡΝΗΤΙΚΟΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΠΥΡΗΝΑΣ" onchange="onMsChange('Stasi')"> ΠΥΡΗΝΑΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="ΙΣΩΣ ΠΥΡΗΝΑΣ" onchange="onMsChange('Stasi')"> ΙΣΩΣ ΠΥΡΗΝΑΣ</label>
+        <label class="ms-opt"><input type="checkbox" value="VIP" onchange="onMsChange('Stasi')"> VIP</label>
+        <label class="ms-opt"><input type="checkbox" value="" onchange="onMsChange('Stasi')"> (Κενό)</label>
+        <span class="ms-clear-btn" onclick="clearMs('Stasi')">Καθαρισμός</span>
+      </div>
+    </div>
+    <div class="ms-wrap">
+      <button class="ms-btn" id="btnIdiotita" onclick="toggleMs('Idiotita')">Ιδιότητα <span id="spIdiotita">▾</span></button>
+      <div class="ms-dd" id="msIdiotita"></div>
+    </div>
+    <div class="ms-wrap">
+      <button class="ms-btn" id="btnAitima" onclick="toggleMs('Aitima')">Αιτήματα <span id="spAitima">▾</span></button>
+      <div class="ms-dd" id="msAitima">
+        <label class="ms-opt"><input type="checkbox" value="exelixi" onchange="onMsChange('Aitima')"> ⏳ Σε εξέλιξη</label>
+        <label class="ms-opt"><input type="checkbox" value="epituxes" onchange="onMsChange('Aitima')"> ✅ Έκλεισε — Επιτυχές</label>
+        <label class="ms-opt"><input type="checkbox" value="anapituxes" onchange="onMsChange('Aitima')"> ❌ Έκλεισε — Ανεπιτυχές</label>
+        <span class="ms-clear-btn" onclick="clearMs('Aitima')">Καθαρισμός</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bulk-bar" id="bulkBar">
+    <span class="bulk-count" id="bulkCount">0 επιλεγμένες</span>
+    <button class="btn btn-amber" style="padding:6px 14px;font-size:12px;" onclick="openBulkHistory()">+ Μαζική καταχώρηση επαφής</button>
+    <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;" onclick="clearSelection()">Ακύρωση επιλογής</button>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="no-sort"><input type="checkbox" class="cb" id="cbAll" onchange="toggleAll(this.checked)"></th>
+          <th onclick="sortBy('eponimo')">Επώνυμο ↕</th>
+          <th onclick="sortBy('onoma')">Όνομα ↕</th>
+          <th onclick="sortBy('dimos')" class="hide-mobile">Δήμος ↕</th>
+          <th class="hide-mobile">Κινητό</th>
+          <th class="hide-mobile">Σταθερό</th>
+          <th class="hide-mobile">Κινητοποιητής</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="7"><div class="loading"><div class="spinner"></div> Φόρτωση...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <span class="pag-info" id="pagInfo"></span>
+    <div class="pag-btns">
+      <button class="pag-btn" id="btnPrev" onclick="prevPage()">← Προηγ.</button>
+      <button class="pag-btn" id="btnNext" onclick="nextPage()">Επόμ. →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div style="display:flex;gap:12px;align-items:flex-start;flex:1;">
+      <div class="drawer-avatar" id="dAvatar"></div>
+      <div><div class="drawer-name" id="dName"></div><div class="drawer-sub" id="dSub"></div></div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-section">
+      <div class="drawer-section-title">Στοιχεία επαφής</div>
+      <div id="dInfo"></div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Ιστορικό επικοινωνίας</div>
+      <div id="dHistory"></div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:12px;" onclick="openAddHistory()">+ Προσθήκη επικοινωνίας</button>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">Αιτήματα</div>
+    <div id="dAitimata"></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:12px;" onclick="openAddAitima()">+ Νέο αίτημα</button>
+    </div>
+  </div>
+  <div class="drawer-actions">
+    <button class="btn btn-ghost" style="flex:1;" onclick="openEditContact()">Επεξεργασία</button>
+    <button class="btn btn-ghost" style="flex:1;" id="dncBtn" onclick="toggleDNC()">🚫 Δεν επικοινωνεί</button>
+    <button class="btn btn-danger" style="flex:1;" onclick="deleteContact()">Διαγραφή</button>
+  </div>
+</div>
+
+<!-- MODAL: Contact -->
+<div class="modal-overlay" id="contactModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Νέα επαφή</span>
+      <button class="drawer-close" onclick="closeModal('contactModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field-wrap"><div class="field-label">Επώνυμο *</div><input type="text" id="fEponimo"></div>
+        <div class="field-wrap"><div class="field-label">Όνομα *</div><input type="text" id="fOnoma"></div>
+        <div class="field-wrap"><div class="field-label">Δήμος</div><input type="text" id="fDimos"></div>
+        <div class="field-wrap"><div class="field-label">Στάση</div>
+          <select id="fStasi">
+            <option value="">—</option>
+            <option>ΔΑ</option><option>ΤΥΠΙΚΟΣ</option><option>ΤΥΠΙΚΗ</option>
+            <option>ΘΕΤΙΚΟΣ</option><option>ΘΕΤΙΚΗ</option><option>ΘΕΡΜΟΣ</option><option>ΘΕΡΜΗ</option>
+            <option>ΠΟΛΥ ΘΕΡΜΟΣ</option><option>ΠΟΛΥ ΘΕΡΜΗ</option>
+            <option>ΑΔΙΑΦΟΡΟΣ</option><option>ΑΔΙΑΦΟΡΗ</option><option>ΑΡΝΗΤΙΚΟΣ</option>
+            <option>ΠΥΡΗΝΑΣ</option><option>ΙΣΩΣ ΠΥΡΗΝΑΣ</option>
+            <option>VIP</option>
+          </select>
+        </div>
+        <div class="field-wrap"><div class="field-label">Κινητοποιητής 1</div><input type="text" id="fKim1"></div>
+        <div class="field-wrap"><div class="field-label">Κινητοποιητής 2</div><input type="text" id="fKim2"></div>
+        <div class="field-wrap"><div class="field-label">Κινητό 1</div><input type="text" id="fKin1"></div>
+        <div class="field-wrap"><div class="field-label">Κινητό 2</div><input type="text" id="fKin2"></div>
+        <div class="field-wrap"><div class="field-label">Σταθερό 1</div><input type="text" id="fStat1"></div>
+        <div class="field-wrap"><div class="field-label">Σταθερό 2</div><input type="text" id="fStat2"></div>
+        <div class="field-wrap"><div class="field-label">Σταθερό 3</div><input type="text" id="fStat3"></div>
+        <div class="field-wrap"><div class="field-label">Email</div><input type="text" id="fEmail"></div>
+        <div class="field-wrap"><div class="field-label">Έτος εγγραφής</div><input type="text" id="fRegYear" placeholder="π.χ. 2021"></div>
+        <div class="field-wrap"><div class="field-label">Ιδιότητα</div>
+          <input type="text" id="fIdiotita" list="idiotitaList" placeholder="Επιλέξτε ή πληκτρολογήστε...">
+          <datalist id="idiotitaList">
+            <option>Βουλευτής</option><option>Δήμαρχος</option>
+            <option>Δημοτικός Σύμβουλος</option><option>Περιφερειακός Σύμβουλος</option>
+            <option>Μέλος ΝΔ</option><option>Στέλεχος ΝΔ</option><option>Πρόεδρος ΔΕΕΠ</option>
+            <option>Επιχειρηματίας</option><option>Γιατρός</option>
+            <option>Δικηγόρος</option><option>Εκπαιδευτικός</option>
+            <option>Δημόσιος Υπάλληλος</option><option>Ιδιωτικός Υπάλληλος</option>
+            <option>Συνταξιούχος</option><option>Πρόεδρος Συλλόγου</option><option>Εθελοντής</option>
+          </datalist>
+        </div>
+        <div class="field-wrap"><div class="field-label">Διεύθυνση</div><input type="text" id="fDief"></div>
+      <div class="field-wrap"><div class="field-label">Τελευταία επαφή</div><input type="date" id="fLastContact"></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Πρόσθετα Στοιχεία</div>
+        <div class="form-grid">
+          <div class="field-wrap"><div class="field-label">Έδωσε λίστα επαφών</div>
+            <select id="fEdoseLista"><option value="">—</option><option value="true">Ναι</option><option value="false">Όχι</option></select>
+          </div>
+          <div class="field-wrap"><div class="field-label">Έκανε συγκέντρωση</div>
+            <select id="fEkaneSynkentrose"><option value="">—</option><option value="true">Ναι</option><option value="false">Όχι</option></select>
+          </div>
+          <div class="field-wrap"><div class="field-label">Ήρθε σε συγκέντρωσή μου</div>
+            <select id="fIlthenSynkentrose"><option value="">—</option><option value="true">Ναι</option><option value="false">Όχι</option></select>
+          </div>
+          <div class="field-wrap"><div class="field-label">Χρονιά συγκέντρωσης</div>
+            <input type="text" id="fXroniaSynkentrose" placeholder="π.χ. 2023">
+          </div>
+          <div class="field-wrap"><div class="field-label">Τον/Την γνωρίζω προσωπικά</div>
+            <select id="fGnorizoProsopika"><option value="">—</option><option value="true">Ναι</option><option value="false">Όχι</option></select>
+          </div>
+        </div>
+        <div class="field-wrap"><div class="field-label">Γενικό Σχόλιο</div>
+          <textarea id="fGenikoSxolio" rows="3" placeholder="Γενικές σημειώσεις..."></textarea>
+        </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('contactModal')">Ακύρωση</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="saveContact()">Αποθήκευση</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: History -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Καταχώρηση επικοινωνίας</span>
+      <button class="drawer-close" onclick="closeModal('historyModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-wrap"><div class="field-label">Ημερομηνία</div><input type="date" id="hDate"></div>
+      <div class="field-wrap"><div class="field-label">Σημειώσεις</div><textarea id="hNote" rows="4"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('historyModal')">Ακύρωση</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="saveHistory()">Αποθήκευση</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Bulk History -->
+<div class="modal-overlay" id="bulkModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Μαζική καταχώρηση επαφής</span>
+      <button class="drawer-close" onclick="closeModal('bulkModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;" id="bulkModalInfo"></p>
+      <div class="field-wrap"><div class="field-label">Ημερομηνία επαφής</div><input type="date" id="bDate"></div>
+      <div class="field-wrap"><div class="field-label">Σημειώσεις (προαιρετικό)</div><textarea id="bNote" rows="3"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('bulkModal')">Ακύρωση</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="saveBulkHistory()">Αποθήκευση για όλες</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: Εξαγωγή Γιορτές -->
+<div class="modal-overlay" id="giortesModal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">
+      <span class="modal-title">🎂 Εξαγωγή τηλ γιορτές</span>
+      <button class="drawer-close" onclick="closeModal('giortesModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-wrap">
+        <div class="field-label">Αναζήτηση ονόματος</div>
+        <input type="text" id="giortesSearch" placeholder="π.χ. ΓΙΩΡΓ" oninput="filterGiortesNames()">
+      </div>
+      <div class="field-label" style="margin-bottom:6px;">Επιλογή ονομάτων</div>
+      <div id="giortesNames" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;max-height:220px;overflow-y:auto;padding:4px 0;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="selectAllGiortes()">Επιλογή όλων</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="clearAllGiortes()">Καθαρισμός</button>
+      </div>
+      <p style="font-size:12px;color:var(--text3);" id="giortesCount"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('giortesModal')">Ακύρωση</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="exportGiortes()">↓ Εξαγωγή CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Αίτημα -->
+<div class="modal-overlay" id="aitimaModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="aitimaModalTitle">Νέο Αίτημα</span>
+      <button class="drawer-close" onclick="closeModal('aitimaModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-wrap"><div class="field-label">Περιγραφή αιτήματος *</div>
+        <textarea id="aPerigrafi" rows="3" placeholder="Περιγράψτε το αίτημα..."></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="field-wrap"><div class="field-label">Κατάσταση</div>
+          <select id="aKatastasi">
+            <option value="Σε εξέλιξη">Σε εξέλιξη</option>
+            <option value="Έκλεισε">Έκλεισε</option>
+          </select>
+        </div>
+        <div class="field-wrap"><div class="field-label">Αποτέλεσμα</div>
+          <select id="aApotelesma">
+            <option value="">—</option>
+            <option value="Επιτυχές">Επιτυχές</option>
+            <option value="Ανεπιτυχές">Ανεπιτυχές</option>
+          </select>
+        </div>
+        <div class="field-wrap"><div class="field-label">Ημερομηνία</div>
+          <input type="date" id="aImerominia">
+        </div>
+        <div class="field-wrap"><div class="field-label">Χειριστής</div>
+          <input type="text" id="aXeiristis" placeholder="Όνομα χειριστή...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('aitimaModal')">Ακύρωση</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="saveAitima()">Αποθήκευση</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://iylnggqxigmvwwwfrpnm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5bG5nZ3F4aWdtdnd3d2ZycG5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzYyMzUsImV4cCI6MjA4OTU1MjIzNX0.VwIhnsNQn_zcBLNP_l9m2XI6uPcebt5f7Q7LtK_BBRs';
+const USERS = {
+  'angaitanis@gmail.com': { pass: 'admin2024', role: 'admin' },
+  'elntair@gmail.com': { pass: 'gram2024', role: 'user' },
+  'agiotis78@hotmail.com': { pass: 'us3r2026', role: 'user' }
+};
+
+const { createClient } = window.supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let allData = [], filtered = [], page = 0;
+const PAGE_SIZE = 50;
+let sortCol = 'eponimo', sortAsc = true;
+let currentContact = null, currentUser = null, editMode = false;
+let selectedIds = new Set();
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const user = USERS[email];
+  if (!user || user.pass !== pass) { document.getElementById('loginError').textContent = 'Λάθος email ή κωδικός.'; return; }
+  currentUser = { email: email, role: user.role };
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.flexDirection = 'column';
+  document.getElementById('userBadge').textContent = email;
+  loadData();
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display = 'none';
+  allData = []; filtered = []; selectedIds.clear();
+}
+
+async function loadData() {
+  showLoading();
+  var all = [], from = 0, batchSize = 1000, done = false;
+  while (!done) {
+    var res = await db.from('epafes').select('*').order('eponimo', { ascending: true }).range(from, from + batchSize - 1);
+    if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+    if (!res.data || res.data.length === 0) { done = true; }
+    else { all = all.concat(res.data); from += batchSize; if (res.data.length < batchSize) done = true; }
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div> Φόρτωση ' + all.length.toLocaleString('el') + ' επαφών...</div></td></tr>';
+  }
+  allData = all;
+  // Load all aitimata for filtering
+  try {
+    var aRes = await db.from('aitimata').select('epafi_id, katastasi, apotelesma');
+    aitimaMap = {};
+    if (aRes.data) {
+      aRes.data.forEach(function(a) {
+        if (!aitimaMap[a.epafi_id]) aitimaMap[a.epafi_id] = [];
+        aitimaMap[a.epafi_id].push(a);
+      });
+    }
+  } catch(e) { aitimaMap = {}; }
+  populateFilters();
+  applyFilters();
+  updateStats();
+}
+
+function populateFilters() {
+  var dimoi = Array.from(new Set(allData.map(function(r){ var d = r.dimos; return (!d || d.trim() === '') ? '' : d.trim(); }))).sort(function(a,b){ if(a==='') return 1; if(b==='') return -1; return a.localeCompare(b,'el'); });
+  var kimoi = [''].concat(Array.from(new Set([].concat(allData.map(function(r){ return r['kinitopoiitis_1']; }), allData.map(function(r){ return r['kinitopoiitis_2']; })).filter(function(v){ return v && v.trim() !== ''; }))).sort(function(a,b){ return a.localeCompare(b,'el'); }));
+  var idiotites = Array.from(new Set(allData.map(function(r){ return r.idiotita; }).filter(Boolean))).sort(function(a,b){ return a.localeCompare(b,'el'); });
+  buildMs('Dimos', dimoi);
+  buildMs('Kim', kimoi);
+  buildMs('Idiotita', idiotites);
+}
+
+function buildMs(key, options) {
+  var dd = document.getElementById('ms' + key);
+  var html = '';
+  options.forEach(function(o) {
+    var label = o === '' ? '(Κενό)' : o;
+    html += '<label class="ms-opt"><input type="checkbox" value="' + o.replace(/"/g, '&quot;') + '" onchange="onMsChange(\'' + key + '\')"> ' + label + '</label>';
+  });
+  html += '<span class="ms-clear-btn" onclick="clearMs(\'' + key + '\')">Καθαρισμός</span>';
+  dd.innerHTML = html;
+}
+
+function toggleMs(key) {
+  document.querySelectorAll('.ms-dd').forEach(function(d) {
+    if (d.id !== 'ms' + key) d.classList.remove('open');
+  });
+  document.getElementById('ms' + key).classList.toggle('open');
+}
+
+function onMsChange(key) {
+  var vals = getMs(key);
+  var btn = document.getElementById('btn' + key);
+  var sp = document.getElementById('sp' + key);
+  if (vals.length === 0) { btn.classList.remove('active-filter'); sp.textContent = '▾'; }
+  else { btn.classList.add('active-filter'); sp.textContent = '(' + vals.length + ')'; }
+  applyFilters();
+}
+
+function getMs(key) {
+  var dd = document.getElementById('ms' + key);
+  if (!dd) return [];
+  return Array.from(dd.querySelectorAll('input:checked')).map(function(i) { return i.value; });
+}
+
+function clearMs(key) {
+  document.getElementById('ms' + key).querySelectorAll('input').forEach(function(i) { i.checked = false; });
+  onMsChange(key);
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.ms-wrap')) {
+    document.querySelectorAll('.ms-dd').forEach(function(d) { d.classList.remove('open'); });
+  }
+});
+
+function applyFilters() {
+  var q = document.getElementById('searchInput').value.toLowerCase();
+  var scope = document.getElementById('searchScope').value;
+  var selDimos = getMs('Dimos');
+  var selKim = getMs('Kim');
+  var selStasi = getMs('Stasi');
+  var selIdiotita = getMs('Idiotita');
+  var selOnoma = getMs('Onoma');
+  var selAitima = getMs('Aitima');
+
+  filtered = allData.filter(function(r) {
+    var mQ = true;
+    if (q) {
+      if (scope === 'eponimo') mQ = r.eponimo && r.eponimo.toLowerCase().startsWith(q);
+      else if (scope === 'onoma') mQ = r.onoma && r.onoma.toLowerCase().startsWith(q);
+      else if (scope === 'name') mQ = [r.eponimo, r.onoma].some(function(v){ return v && v.toLowerCase().includes(q); });
+      else if (scope === 'kim') mQ = [r['kinitopoiitis_1'], r['kinitopoiitis_2']].some(function(v){ return v && v.toLowerCase().includes(q); });
+      else if (scope === 'phone') mQ = [r['kinito_1'], r['kinito_2'], r.stathero_1, r.stathero_2, r.stathero_3].some(function(v){ return v && v.replace(/ /g,'').includes(q.replace(/ /g,'')); });
+      else if (scope === 'tk') mQ = r.dieuthinsi && r.dieuthinsi.replace(/ /g,'').includes(q.replace(/ /g,''));
+      else mQ = [r.eponimo, r.onoma, r.dimos, r['kinitopoiitis_1'], r['kinitopoiitis_2'], r.idiotita].some(function(v){ return v && v.toLowerCase().includes(q); });
+    }
+    var rDimos = (!r.dimos || r.dimos.trim() === '') ? '' : r.dimos.trim();
+    var mD = !selDimos.length || selDimos.indexOf(rDimos) >= 0;
+    var k1 = (r['kinitopoiitis_1'] || '').trim(); var k2 = (r['kinitopoiitis_2'] || '').trim();
+    var mK = !selKim.length || selKim.some(function(s){ if(s === '') return k1 === '' && k2 === ''; return k1 === s || k2 === s; });
+    var mS = !selStasi.length || selStasi.some(function(s){ var rs = (r.stasi || '').trim(); return s === '' ? rs === '' : rs === s; });
+    var mI = !selIdiotita.length || selIdiotita.indexOf(r.idiotita || '') >= 0;
+    var mA = true;
+    if (selAitima.length) {
+      var epAitimata = aitimaMap[r.id] || [];
+      mA = selAitima.some(function(s) {
+        if (s === 'exelixi') return epAitimata.some(function(a){ return a.katastasi === 'Σε εξέλιξη'; });
+        if (s === 'epituxes') return epAitimata.some(function(a){ return a.katastasi === 'Έκλεισε' && a.apotelesma === 'Επιτυχές'; });
+        if (s === 'anapituxes') return epAitimata.some(function(a){ return a.katastasi === 'Έκλεισε' && a.apotelesma === 'Ανεπιτυχές'; });
+        return false;
+      });
+    }
+    return mQ && mD && mK && mS && mI && mA;
+  });
+
+  filtered.sort(function(a, b) {
+    var av = (a[sortCol] || '').toLowerCase(), bv = (b[sortCol] || '').toLowerCase();
+    return sortAsc ? av.localeCompare(bv, 'el') : bv.localeCompare(av, 'el');
+  });
+
+  page = 0; renderTable(); updateStats();
+}
+
+function sortBy(col) { if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; } applyFilters(); }
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = allData.length.toLocaleString('el');
+  document.getElementById('statFiltered').textContent = filtered.length.toLocaleString('el');
+  document.getElementById('statDimoi').textContent = new Set(allData.map(function(r){ return r.dimos; }).filter(Boolean)).size;
+}
+
+function showLoading() { document.getElementById('tableBody').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div> Φόρτωση...</div></td></tr>'; }
+
+function formatDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('el-GR'); }
+
+function renderTable() {
+  var start = page * PAGE_SIZE, slice = filtered.slice(start, start + PAGE_SIZE);
+  var tbody = document.getElementById('tableBody');
+  if (!slice.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Δεν βρέθηκαν επαφές</p></div></td></tr>'; updatePager(0); return; }
+  tbody.innerHTML = slice.map(function(r) {
+    var rowColor = r.stasi === 'ΠΥΡΗΝΑΣ' ? 'pyrinas-row' : (r.stasi === 'VIP' ? 'vip-row' : (r.stasi === 'ΙΣΩΣ ΠΥΡΗΝΑΣ' ? 'isos-pyrinas-row' : ''));
+    return '<tr class="' + (selectedIds.has(r.id) ? 'sel-row' : '') + (r.do_not_contact ? ' dnc' : '') + ' ' + rowColor + '" onclick="rowClick(event,' + r.id + ')">' +
+      '<td onclick="event.stopPropagation()"><input type="checkbox" class="cb" ' + (selectedIds.has(r.id) ? 'checked' : '') + ' onchange="toggleSelect(' + r.id + ',this.checked)"></td>' +
+      '<td class="td-name">' + (r.eponimo || '—') + (r.do_not_contact ? ' <span style="color:var(--red);font-size:11px;">🚫</span>' : '') + '</td>' +
+      '<td>' + (r.onoma || '—') + '</td>' +
+      '<td class="hide-mobile">' + (r.dimos || '—') + '</td>' +
+      '<td class="hide-mobile td-mono">' + (r['kinito_1'] || '—') + '</td>' +
+      '<td class="hide-mobile td-mono">' + (r.stathero_1 || '—') + '</td>' +
+      '<td class="hide-mobile" style="font-size:12px;color:var(--text2);">' + ([r['kinitopoiitis_1'], r['kinitopoiitis_2']].filter(Boolean).join(', ') || '—') + '</td>' +
+      '</tr>';
+  }).join('');
+  updatePager(filtered.length);
+  document.getElementById('cbAll').checked = slice.every(function(r){ return selectedIds.has(r.id); });
+}
+
+function updatePager(total) {
+  var start = page * PAGE_SIZE;
+  document.getElementById('pagInfo').textContent = (total ? start + 1 : 0) + '–' + Math.min(start + PAGE_SIZE, total) + ' από ' + total.toLocaleString('el');
+  document.getElementById('btnPrev').disabled = page === 0;
+  document.getElementById('btnNext').disabled = (page + 1) * PAGE_SIZE >= total;
+}
+
+function prevPage() { if (page > 0) { page--; renderTable(); } }
+function nextPage() { if ((page + 1) * PAGE_SIZE < filtered.length) { page++; renderTable(); } }
+
+function rowClick(e, id) { if (e.target.type === 'checkbox') return; openContact(id); }
+
+function toggleSelect(id, checked) { if (checked) selectedIds.add(id); else selectedIds.delete(id); updateBulkBar(); renderTable(); }
+
+function toggleAll(checked) {
+  var start = page * PAGE_SIZE, slice = filtered.slice(start, start + PAGE_SIZE);
+  slice.forEach(function(r) { if (checked) selectedIds.add(r.id); else selectedIds.delete(r.id); });
+  updateBulkBar(); renderTable();
+}
+
+function updateBulkBar() {
+  var bar = document.getElementById('bulkBar');
+  if (selectedIds.size > 0) { bar.classList.add('visible'); document.getElementById('bulkCount').textContent = selectedIds.size + ' επιλεγμένες'; }
+  else { bar.classList.remove('visible'); }
+}
+
+function clearSelection() { selectedIds.clear(); updateBulkBar(); renderTable(); }
+
+function openBulkHistory() {
+  document.getElementById('bDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('bNote').value = '';
+  document.getElementById('bulkModalInfo').textContent = 'Θα καταχωρηθεί επαφή για ' + selectedIds.size + ' άτομα.';
+  document.getElementById('bulkModal').classList.add('open');
+}
+
+async function saveBulkHistory() {
+  var imerominia = document.getElementById('bDate').value;
+  var simeioseis = document.getElementById('bNote').value.trim();
+  if (!imerominia) { showToast('Βάλε ημερομηνία', 'error'); return; }
+  var rows = Array.from(selectedIds).map(function(id) { return { epafi_id: id, imerominia: imerominia, simeioseis: simeioseis }; });
+  var res = await db.from('istoriko').insert(rows);
+  if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+  await db.from('epafes').update({ last_contact: imerominia }).in('id', Array.from(selectedIds));
+  showToast('Καταχωρήθηκε για ' + selectedIds.size + ' επαφές!', 'success');
+  closeModal('bulkModal'); clearSelection(); loadData();
+}
+
+function exportCSV() {
+  var cols = ['eponimo','onoma','dimos','kinitopoiitis_1','kinitopoiitis_2','kinito_1','kinito_2','stathero_1','stathero_2','stathero_3','email','dieuthinsi','registration_year','idiotita','stasi','last_contact'];
+  var headers = ['Επώνυμο','Όνομα','Δήμος','Κινητοποιητής 1','Κινητοποιητής 2','Κινητό 1','Κινητό 2','Σταθερό 1','Σταθερό 2','Σταθερό 3','Email','Διεύθυνση','Έτος εγγραφής','Ιδιότητα','Στάση','Τελ. Επαφή'];
+  var rows = filtered.map(function(r) { return cols.map(function(c) { return '"' + (r[c] || '').toString().replace(/"/g, '""') + '"'; }).join(','); });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'crm_export_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+  showToast('Εξαγωγή ' + filtered.length + ' επαφών!', 'success');
+}
+
+async function openContact(id) {
+  currentContact = allData.find(function(r) { return r.id === id; });
+  if (!currentContact) return;
+  var ini = ((currentContact.eponimo || '')[0] + (currentContact.onoma || '')[0]).toUpperCase();
+  document.getElementById('dAvatar').textContent = ini;
+  document.getElementById('dName').textContent = (currentContact.eponimo || '') + ' ' + (currentContact.onoma || '');
+  document.getElementById('dSub').textContent = currentContact.dimos || '';
+  var fields = [
+    ['Δήμος', currentContact.dimos],
+    ['Κινητοποιητής 1', currentContact['kinitopoiitis_1']],
+    ['Κινητοποιητής 2', currentContact['kinitopoiitis_2']],
+    ['Κινητό 1', currentContact['kinito_1']],
+    ['Κινητό 2', currentContact['kinito_2']],
+    ['Σταθερό 1', currentContact.stathero_1],
+    ['Email', currentContact.email],
+    ['Διεύθυνση', currentContact.dieuthinsi],
+    ['Ιδιότητα', currentContact.idiotita],
+    ['Στάση', currentContact.stasi],
+    ['Τελ. επαφή', formatDate(currentContact.last_contact)],
+    ['Έδωσε λίστα', currentContact.edose_lista === true ? '✅ Ναι' : currentContact.edose_lista === false ? '❌ Όχι' : '—'],
+    ['Έκανε συγκέντρωση', currentContact.ekane_synkentrose === true ? '✅ Ναι' : currentContact.ekane_synkentrose === false ? '❌ Όχι' : '—'],
+    ['Ήρθε σε συγκέντρωση', currentContact.ilthen_synkentrose === true ? '✅ Ναι (' + (currentContact.xronia_synkentrose||'') + ')' : currentContact.ilthen_synkentrose === false ? '❌ Όχι' : '—'],
+    ['Γνωρίζω προσωπικά', currentContact.gnorizo_prosopika === true ? '✅ Ναι' : currentContact.gnorizo_prosopika === false ? '❌ Όχι' : '—'],
+    ['Γενικό Σχόλιο', currentContact.geniko_sxolio],
+    ['Δεν επικοινωνεί', currentContact.do_not_contact ? '🚫 ΝΑΙ' : 'Όχι'],
+  ];
+  document.getElementById('dInfo').innerHTML = fields.map(function(f) {
+    return '<div class="info-row"><span class="info-key">' + f[0] + '</span><span class="info-val">' + (f[1] || '—') + '</span></div>';
+  }).join('');
+  var hres = await db.from('istoriko').select('*').eq('epafi_id', id).order('imerominia', { ascending: false });
+  var hDiv = document.getElementById('dHistory');
+  if (!hres.data || !hres.data.length) { hDiv.innerHTML = '<p style="font-size:12px;color:var(--text3);">Δεν υπάρχει ιστορικό ακόμα.</p>'; }
+  else { hDiv.innerHTML = hres.data.map(function(h) { return '<div class="hist-item"><div class="hist-date">' + formatDate(h.imerominia) + '</div><div class="hist-note">' + (h.simeioseis || '') + '</div></div>'; }).join(''); }
+  var dncBtn = document.getElementById('dncBtn');
+  if (currentContact.do_not_contact) {
+    dncBtn.textContent = '✓ Επαναφορά επικοινωνίας';
+    dncBtn.style.color = 'var(--green)';
+    dncBtn.style.borderColor = 'rgba(52,201,122,.3)';
+  } else {
+    dncBtn.textContent = '🚫 Δεν επικοινωνεί';
+    dncBtn.style.color = '';
+    dncBtn.style.borderColor = '';
+  }
+  loadAitimata(id);
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+
+async function toggleDNC() {
+  if (!currentContact) return;
+  var newVal = !currentContact.do_not_contact;
+  var res = await db.from('epafes').update({ do_not_contact: newVal }).eq('id', currentContact.id);
+  if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+  showToast(newVal ? '🚫 Επαφή σημειώθηκε ως "Δεν επικοινωνεί"' : '✓ Επαναφέρθηκε η επικοινωνία', newVal ? 'error' : 'success');
+  closeDrawer(); loadData();
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  currentContact = null;
+}
+
+function openNewContact() {
+  editMode = false;
+  document.getElementById('modalTitle').textContent = 'Νέα επαφή';
+  ['fEponimo','fOnoma','fDimos','fKim1','fKim2','fKin1','fKin2','fStat1','fStat2','fStat3','fEmail','fIdiotita','fRegYear','fDief','fXroniaSynkentrose','fGenikoSxolio'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['fEdoseLista','fEkaneSynkentrose','fIlthenSynkentrose','fGnorizoProsopika'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('fStasi').value = '';
+  document.getElementById('fLastContact').value = '';
+  document.getElementById('contactModal').classList.add('open');
+}
+
+function openEditContact() {
+  if (!currentContact) return;
+  editMode = true;
+  document.getElementById('modalTitle').textContent = 'Επεξεργασία επαφής';
+  document.getElementById('fEponimo').value = currentContact.eponimo || '';
+  document.getElementById('fOnoma').value = currentContact.onoma || '';
+  document.getElementById('fDimos').value = currentContact.dimos || '';
+  document.getElementById('fStasi').value = currentContact.stasi || '';
+  document.getElementById('fKim1').value = currentContact['kinitopoiitis_1'] || '';
+  document.getElementById('fKim2').value = currentContact['kinitopoiitis_2'] || '';
+  document.getElementById('fKin1').value = currentContact['kinito_1'] || '';
+  document.getElementById('fKin2').value = currentContact['kinito_2'] || '';
+  document.getElementById('fStat1').value = currentContact.stathero_1 || '';
+  document.getElementById('fStat2').value = currentContact.stathero_2 || '';
+  document.getElementById('fStat3').value = currentContact.stathero_3 || '';
+  document.getElementById('fEmail').value = currentContact.email || '';
+  document.getElementById('fIdiotita').value = currentContact.idiotita || '';
+  document.getElementById('fRegYear').value = currentContact.registration_year || '';
+  document.getElementById('fDief').value = currentContact.dieuthinsi || '';
+  document.getElementById('fLastContact').value = currentContact.last_contact || '';
+  document.getElementById('fEdoseLista').value = currentContact.edose_lista === true ? 'true' : currentContact.edose_lista === false ? 'false' : '';
+  document.getElementById('fEkaneSynkentrose').value = currentContact.ekane_synkentrose === true ? 'true' : currentContact.ekane_synkentrose === false ? 'false' : '';
+  document.getElementById('fIlthenSynkentrose').value = currentContact.ilthen_synkentrose === true ? 'true' : currentContact.ilthen_synkentrose === false ? 'false' : '';
+  document.getElementById('fXroniaSynkentrose').value = currentContact.xronia_synkentrose || '';
+  document.getElementById('fGnorizoProsopika').value = currentContact.gnorizo_prosopika === true ? 'true' : currentContact.gnorizo_prosopika === false ? 'false' : '';
+  document.getElementById('fGenikoSxolio').value = currentContact.geniko_sxolio || '';
+  document.getElementById('contactModal').classList.add('open');
+}
+
+async function saveContact() {
+  var payload = {
+    eponimo: document.getElementById('fEponimo').value.trim(),
+    onoma: document.getElementById('fOnoma').value.trim(),
+    dimos: document.getElementById('fDimos').value.trim(),
+    stasi: document.getElementById('fStasi').value,
+    'kinitopoiitis_1': document.getElementById('fKim1').value.trim(),
+    'kinitopoiitis_2': document.getElementById('fKim2').value.trim(),
+    'kinito_1': document.getElementById('fKin1').value.trim(),
+    'kinito_2': document.getElementById('fKin2').value.trim(),
+    stathero_1: document.getElementById('fStat1').value.trim(),
+    stathero_2: document.getElementById('fStat2').value.trim(),
+    stathero_3: document.getElementById('fStat3').value.trim(),
+    email: document.getElementById('fEmail').value.trim(),
+    idiotita: document.getElementById('fIdiotita').value.trim(),
+    registration_year: document.getElementById('fRegYear').value.trim(),
+    dieuthinsi: document.getElementById('fDief').value.trim(),
+    last_contact: document.getElementById('fLastContact').value || null,
+    edose_lista: document.getElementById('fEdoseLista').value === 'true' ? true : document.getElementById('fEdoseLista').value === 'false' ? false : null,
+    ekane_synkentrose: document.getElementById('fEkaneSynkentrose').value === 'true' ? true : document.getElementById('fEkaneSynkentrose').value === 'false' ? false : null,
+    ilthen_synkentrose: document.getElementById('fIlthenSynkentrose').value === 'true' ? true : document.getElementById('fIlthenSynkentrose').value === 'false' ? false : null,
+    xronia_synkentrose: document.getElementById('fXroniaSynkentrose').value.trim() || null,
+    gnorizo_prosopika: document.getElementById('fGnorizoProsopika').value === 'true' ? true : document.getElementById('fGnorizoProsopika').value === 'false' ? false : null,
+    geniko_sxolio: document.getElementById('fGenikoSxolio').value.trim() || null,
+  };
+  if (!payload.eponimo && !payload.onoma) { showToast('Συμπλήρωσε τουλάχιστον όνομα ή επώνυμο', 'error'); return; }
+  var res;
+  if (editMode && currentContact) { res = await db.from('epafes').update(payload).eq('id', currentContact.id); }
+  else { res = await db.from('epafes').insert([payload]); }
+  if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+  showToast('Αποθηκεύτηκε!', 'success');
+  closeModal('contactModal'); closeDrawer(); loadData();
+}
+
+async function deleteContact() {
+  if (!currentContact) return;
+  if (!confirm('Διαγραφή "' + currentContact.eponimo + ' ' + currentContact.onoma + '";')) return;
+  var res = await db.from('epafes').delete().eq('id', currentContact.id);
+  if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+  showToast('Η επαφή διαγράφηκε', 'success');
+  closeDrawer(); loadData();
+}
+
+function openAddHistory() {
+  document.getElementById('hDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('hNote').value = '';
+  document.getElementById('historyModal').classList.add('open');
+}
+
+async function saveHistory() {
+  if (!currentContact) return;
+  var payload = { epafi_id: currentContact.id, imerominia: document.getElementById('hDate').value, simeioseis: document.getElementById('hNote').value.trim() };
+  var res = await db.from('istoriko').insert([payload]);
+  if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+  await db.from('epafes').update({ last_contact: payload.imerominia }).eq('id', currentContact.id);
+  showToast('Καταχωρήθηκε!', 'success');
+  closeModal('historyModal'); openContact(currentContact.id); loadData();
+}
+
+
+function exportPhones() {
+  var withPhone = filtered.filter(function(r) { return (r['kinito_1'] || r['kinito_2']) && !r.do_not_contact; });
+  if (!withPhone.length) { showToast('Δεν βρέθηκαν επαφές με κινητό', 'error'); return; }
+  withPhone.sort(function(a, b) {
+    function p(r) { if(r.stasi==='ΠΥΡΗΝΑΣ')return 0; if(r.stasi==='VIP')return 1; if(r.stasi==='ΙΣΩΣ ΠΥΡΗΝΑΣ')return 2; return 3; }
+    var pa=p(a), pb=p(b);
+    if(pa!==pb) return pa-pb;
+    return (a.eponimo||'').localeCompare(b.eponimo||'','el');
+  });
+  var cols = ['eponimo', 'onoma', 'dimos', 'kinito_1', 'kinito_2'];
+  var headers = ['Επώνυμο', 'Όνομα', 'Δήμος', 'Κινητό 1', 'Κινητό 2'];
+  var rows = withPhone.map(function(r) {
+    return cols.map(function(c) { return '"' + (r[c] || '').toString().replace(/"/g, '""') + '"'; }).join(',');
+  });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'kinita_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+  showToast('Εξαγωγή ' + withPhone.length + ' κινητών!', 'success');
+}
+
+
+var giortesAllNames = [];
+var giortesFilteredNames = [];
+
+function openExportGiortes() {
+  giortesAllNames = Array.from(new Set(allData.map(function(r){ return r.onoma; }).filter(Boolean))).sort(function(a,b){ return a.localeCompare(b,'el'); });
+  giortesFilteredNames = giortesAllNames.slice();
+  var panel = document.getElementById('giortesPanel');
+  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  document.getElementById('giortesSearch2').value = '';
+  document.getElementById('giortesCount2').textContent = '';
+  renderGiortesNames2();
+}
+
+function filterGiortesNames() {
+  var q = document.getElementById('giortesSearch').value.trim().toLowerCase();
+  giortesFilteredNames = q ? giortesAllNames.filter(function(n){ return n.toLowerCase().includes(q); }) : giortesAllNames.slice();
+  renderGiortesNames();
+}
+
+function renderGiortesNames() {
+  var container = document.getElementById('giortesNames');
+  container.innerHTML = giortesFilteredNames.map(function(n) {
+    var count = allData.filter(function(r){ return r.onoma === n; }).length;
+    return '<label class="ms-opt"><input type="checkbox" class="giortes-cb" value="' + n.replace(/"/g,'&quot;') + '" onchange="updateGiortesCount()"> ' + n + ' <span style="color:var(--text3);font-size:11px;">(' + count + ')</span></label>';
+  }).join('');
+  updateGiortesCount();
+}
+
+function updateGiortesCount() {
+  var selected = Array.from(document.querySelectorAll('.giortes-cb:checked')).map(function(i){ return i.value; });
+  if (!selected.length) { document.getElementById('giortesCount').textContent = ''; return; }
+  var found = allData.filter(function(r){ return selected.indexOf(r.onoma) >= 0 && !r.do_not_contact; });
+  var withPhone = found.filter(function(r){
+    var k1 = (r['kinito_1'] || '').trim();
+    var k2 = (r['kinito_2'] || '').trim();
+    var s1 = (r.stathero_1 || '').trim();
+    return k1 !== '' || k2 !== '' || s1 !== '';
+  });
+  document.getElementById('giortesCount').textContent = 'Επιλεγμένα: ' + found.length + ' επαφές (' + withPhone.length + ' με τηλέφωνο)';
+}
+
+function selectAllGiortes() {
+  document.querySelectorAll('.giortes-cb').forEach(function(cb){ cb.checked = true; });
+  updateGiortesCount();
+}
+
+function clearAllGiortes() {
+  document.querySelectorAll('.giortes-cb').forEach(function(cb){ cb.checked = false; });
+  updateGiortesCount();
+}
+
+function exportGiortes() {
+  var selected = Array.from(document.querySelectorAll('.giortes-cb:checked')).map(function(i){ return i.value; });
+  if (!selected.length) { showToast('Επίλεξε τουλάχιστον ένα όνομα', 'error'); return; }
+  var found = allData.filter(function(r){ return selected.indexOf(r.onoma) >= 0 && !r.do_not_contact; });
+  var withPhone = found.filter(function(r){
+    var k1 = (r['kinito_1'] || '').trim();
+    var k2 = (r['kinito_2'] || '').trim();
+    var s1 = (r.stathero_1 || '').trim();
+    return k1 !== '' || k2 !== '' || s1 !== '';
+  });
+  if (!withPhone.length) { showToast('Δεν βρέθηκαν επαφές με τηλέφωνο', 'error'); return; }
+  function stasiPriority(r) {
+    var s = (r.stasi || '').trim();
+    if (s === 'ΠΥΡΗΝΑΣ') return 0;
+    if (s === 'VIP') return 1;
+    if (s === 'ΙΣΩΣ ΠΥΡΗΝΑΣ') return 2;
+    return 3;
+  }
+  withPhone = withPhone.slice().sort(function(a, b) {
+    var pa = stasiPriority(a), pb = stasiPriority(b);
+    if (pa !== pb) return pa - pb;
+    return (a.eponimo || '').localeCompare(b.eponimo || '', 'el');
+  });
+  var cols = ['eponimo', 'onoma', 'dimos', 'kinito_1', 'kinito_2', 'stathero_1', 'kinitopoiitis_1', 'kinitopoiitis_2', 'stasi', 'idiotita'];
+  var headers = ['Επώνυμο', 'Όνομα', 'Δήμος', 'Κινητό 1', 'Κινητό 2', 'Σταθερό 1', 'Κινητοποιητής 1', 'Κινητοποιητής 2', 'Στάση', 'Ιδιότητα'];
+  var rows = withPhone.map(function(r) {
+    return cols.map(function(c){ return '"' + (r[c] || '').toString().replace(/"/g,'""') + '"'; }).join(',');
+  });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'giortes_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+  showToast('Εξαγωγή ' + withPhone.length + ' επαφών!', 'success');
+  closeModal('giortesModal');
+}
+
+
+// AITIMATA
+async function loadAitimata(epafi_id) {
+  var res = await db.from('aitimata').select('*').eq('epafi_id', epafi_id).order('imerominia', {ascending: false});
+  var div = document.getElementById('dAitimata');
+  if (!res.data || !res.data.length) {
+    div.innerHTML = '<p style="font-size:12px;color:var(--text3);">Δεν υπάρχουν αιτήματα ακόμα.</p>';
+    return;
+  }
+  div.innerHTML = res.data.map(function(a) {
+    var badgeCls = a.katastasi === 'Σε εξέλιξη' ? 'badge-exelixi' :
+      a.apotelesma === 'Επιτυχές' ? 'badge-ekleise-ok' : 'badge-ekleise-no';
+    var badgeText = a.katastasi === 'Σε εξέλιξη' ? '⏳ Σε εξέλιξη' :
+      a.apotelesma === 'Επιτυχές' ? '✅ Έκλεισε — Επιτυχές' : '❌ Έκλεισε — Ανεπιτυχές';
+    return '<div class="aitima-item">' +
+      '<div class="aitima-header">' +
+        '<span style="font-size:11px;color:var(--text3);">' + (a.imerominia || '') + '</span>' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<span class="aitima-badge ' + badgeCls + '">' + badgeText + '</span>' +
+          '<button onclick="openEditAitima(' + JSON.stringify(a).replace(/'/g,"\\'") + ')" style="background:none;border:1px solid var(--border2);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text2);cursor:pointer;">✏️</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="aitima-desc">' + (a.perigrafi || '') + '</div>' +
+      (a.xeiristis ? '<div style="font-size:11px;color:var(--text3);margin-top:4px;">👤 Χειριστής: ' + a.xeiristis + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+var editingAitimaId = null;
+
+function openAddAitima() {
+  editingAitimaId = null;
+  document.getElementById('aitimaModalTitle').textContent = 'Νέο Αίτημα';
+  document.getElementById('aPerigrafi').value = '';
+  document.getElementById('aKatastasi').value = 'Σε εξέλιξη';
+  document.getElementById('aApotelesma').value = '';
+  document.getElementById('aImerominia').value = new Date().toISOString().split('T')[0];
+  document.getElementById('aXeiristis').value = '';
+  document.getElementById('aitimaModal').classList.add('open');
+}
+
+function openEditAitima(a) {
+  editingAitimaId = a.id;
+  document.getElementById('aitimaModalTitle').textContent = 'Επεξεργασία Αιτήματος';
+  document.getElementById('aPerigrafi').value = a.perigrafi || '';
+  document.getElementById('aKatastasi').value = a.katastasi || 'Σε εξέλιξη';
+  document.getElementById('aApotelesma').value = a.apotelesma || '';
+  document.getElementById('aImerominia').value = a.imerominia || '';
+  document.getElementById('aXeiristis').value = a.xeiristis || '';
+  document.getElementById('aitimaModal').classList.add('open');
+}
+
+function openEditAitima(a) {
+  editingAitimaId = a.id;
+  document.getElementById('aitimaModalTitle').textContent = 'Επεξεργασία Αιτήματος';
+  document.getElementById('aPerigrafi').value = a.perigrafi || '';
+  document.getElementById('aKatastasi').value = a.katastasi || 'Σε εξέλιξη';
+  document.getElementById('aApotelesma').value = a.apotelesma || '';
+  document.getElementById('aImerominia').value = a.imerominia || '';
+  document.getElementById('aXeiristis').value = a.xeiristis || '';
+  document.getElementById('aitimaModal').classList.add('open');
+}
+
+async function saveAitima() {
+  if (!currentContact) return;
+  var perigrafi = document.getElementById('aPerigrafi').value.trim();
+  if (!perigrafi) { showToast('Συμπλήρωσε περιγραφή', 'error'); return; }
+  var payload = {
+    perigrafi: perigrafi,
+    katastasi: document.getElementById('aKatastasi').value,
+    apotelesma: document.getElementById('aApotelesma').value || null,
+    imerominia: document.getElementById('aImerominia').value || null,
+    xeiristis: document.getElementById('aXeiristis').value.trim() || null
+  };
+  var res;
+  if (editingAitimaId) {
+    res = await db.from('aitimata').update(payload).eq('id', editingAitimaId);
+    if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+    showToast('Αίτημα ενημερώθηκε!', 'success');
+  } else {
+    payload.epafi_id = currentContact.id;
+    res = await db.from('aitimata').insert([payload]);
+    if (res.error) { showToast('Σφάλμα: ' + res.error.message, 'error'); return; }
+    showToast('Αίτημα καταχωρήθηκε!', 'success');
+  }
+  closeModal('aitimaModal');
+  loadAitimata(currentContact.id);
+}
+
+
+function filterGiortesNames2() {
+  var q = document.getElementById('giortesSearch2').value.trim().toLowerCase();
+  giortesFilteredNames = q ? giortesAllNames.filter(function(n){ return n.toLowerCase().startsWith(q); }) : giortesAllNames.slice();
+  renderGiortesNames2();
+}
+
+function renderGiortesNames2() {
+  var container = document.getElementById('giortesNames2');
+  container.innerHTML = giortesFilteredNames.map(function(n) {
+    var count = allData.filter(function(r){ return r.onoma === n; }).length;
+    return '<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;font-size:14px;color:var(--text1);">' +
+      '<input type="checkbox" class="giortes-cb2" value="' + n.replace(/"/g,'&quot;') + '" onchange="updateGiortesCount2()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;"> ' +
+      '<span>' + n + '</span> <span style="color:var(--text3);font-size:12px;">(' + count + ')</span></label>';
+  }).join('');
+  updateGiortesCount2();
+}
+
+function updateGiortesCount2() {
+  var selected = Array.from(document.querySelectorAll('.giortes-cb2:checked')).map(function(i){ return i.value; });
+  if (!selected.length) { document.getElementById('giortesCount2').textContent = ''; return; }
+  var found = allData.filter(function(r){ return selected.indexOf(r.onoma) >= 0 && !r.do_not_contact; });
+  var withPhone = found.filter(function(r){ var k1=(r['kinito_1']||'').trim(),k2=(r['kinito_2']||'').trim(),s1=(r.stathero_1||'').trim(); return k1||k2||s1; });
+  document.getElementById('giortesCount2').textContent = 'Επιλεγμένα: ' + found.length + ' (' + withPhone.length + ' με τηλέφωνο)';
+}
+
+function selectAllGiortes2() {
+  document.querySelectorAll('.giortes-cb2').forEach(function(cb){ cb.checked = true; });
+  updateGiortesCount2();
+}
+
+function clearAllGiortes2() {
+  document.querySelectorAll('.giortes-cb2').forEach(function(cb){ cb.checked = false; });
+  updateGiortesCount2();
+}
+
+function exportGiortes2() {
+  var selected = Array.from(document.querySelectorAll('.giortes-cb2:checked')).map(function(i){ return i.value; });
+  if (!selected.length) { showToast('Επίλεξε τουλάχιστον ένα όνομα', 'error'); return; }
+  var found = allData.filter(function(r){ return selected.indexOf(r.onoma) >= 0 && !r.do_not_contact; });
+  var withPhone = found.filter(function(r){ var k1=(r['kinito_1']||'').trim(),k2=(r['kinito_2']||'').trim(),s1=(r.stathero_1||'').trim(); return k1||k2||s1; });
+  if (!withPhone.length) { showToast('Δεν βρέθηκαν επαφές με τηλέφωνο', 'error'); return; }
+  withPhone.sort(function(a,b){
+    function p(r){if(r.stasi==='ΠΥΡΗΝΑΣ')return 0;if(r.stasi==='VIP')return 1;if(r.stasi==='ΙΣΩΣ ΠΥΡΗΝΑΣ')return 2;return 3;}
+    var pa=p(a),pb=p(b); if(pa!==pb)return pa-pb;
+    return (a.eponimo||'').localeCompare(b.eponimo||'','el');
+  });
+  var cols = ['eponimo','onoma','dimos','kinito_1','kinito_2','stathero_1','kinitopoiitis_1','kinitopoiitis_2','stasi','idiotita'];
+  var headers = ['Επώνυμο','Όνομα','Δήμος','Κινητό 1','Κινητό 2','Σταθερό 1','Κινητοποιητής 1','Κινητοποιητής 2','Στάση','Ιδιότητα'];
+  var rows = withPhone.map(function(r){ return cols.map(function(c){ return '"'+(r[c]||'').toString().replace(/"/g,'""')+'"'; }).join(','); });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'giortes_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  showToast('Εξαγωγή '+withPhone.length+' επαφών!','success');
+  document.getElementById('giortesPanel').style.display='none';
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(function() { t.className = 'toast'; }, 2800);
+}
+</script>
+</body>
+</html>
