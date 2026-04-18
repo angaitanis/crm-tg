@@ -113,7 +113,7 @@ td{padding:10px 12px;color:var(--text);vertical-align:middle;white-space:nowrap;
 .hist-date{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent);margin-bottom:4px;}
 .hist-note{font-size:13px;line-height:1.5;}
 /* MODALS */
-.modal-overlay{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.7);z-index:300;align-items:center;justify-content:center;}
+.modal-overlay{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.7);z-index:99999;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;}
 .modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
@@ -750,11 +750,55 @@ async function saveBulkHistory() {
   closeModal('bulkModal'); clearSelection(); loadData();
 }
 
-function exportCSV() {
-  var cols = ['eponimo','onoma','dimos','kinitopoiitis_1','kinitopoiitis_2','kinito_1','kinito_2','stathero_1','stathero_2','stathero_3','email','dieuthinsi','registration_year','idiotita','stasi','last_contact'];
-  var headers = ['Επώνυμο','Όνομα','Δήμος','Κινητοποιητής 1','Κινητοποιητής 2','Κινητό 1','Κινητό 2','Σταθερό 1','Σταθερό 2','Σταθερό 3','Email','Διεύθυνση','Έτος εγγραφής','Ιδιότητα','Στάση','Τελ. Επαφή'];
-  var rows = filtered.map(function(r) { return cols.map(function(c) { return '"' + (r[c] || '').toString().replace(/"/g, '""') + '"'; }).join(','); });
-  var csv = [headers.join(',')].concat(rows).join('\n');
+async function exportCSV() {
+  showToast('Φόρτωση δεδομένων...', 'success');
+  var ids = filtered.map(function(r) { return r.id; });
+
+  // Φόρτωση ιστορικού σε batches
+  var allIstoriko = [];
+  for (var i = 0; i < ids.length; i += 500) {
+    var batch = ids.slice(i, i + 500);
+    var hRes = await db.from('istoriko').select('epafi_id,imerominia,simeioseis').in('epafi_id', batch).order('imerominia', {ascending: false});
+    if (hRes.data) allIstoriko = allIstoriko.concat(hRes.data);
+  }
+
+  // Φόρτωση αιτημάτων σε batches
+  var allAitimata = [];
+  for (var i = 0; i < ids.length; i += 500) {
+    var batch = ids.slice(i, i + 500);
+    var aRes = await db.from('aitimata').select('epafi_id,imerominia,perigrafi,katastasi,apotelesma,xeiristis').in('epafi_id', batch).order('imerominia', {ascending: false});
+    if (aRes.data) allAitimata = allAitimata.concat(aRes.data);
+  }
+
+  // Ομαδοποίηση ανά epafi_id
+  var historikoMap = {};
+  allIstoriko.forEach(function(h) {
+    if (!historikoMap[h.epafi_id]) historikoMap[h.epafi_id] = [];
+    historikoMap[h.epafi_id].push((h.imerominia || '') + ': ' + (h.simeioseis || ''));
+  });
+  var aitimaMap = {};
+  allAitimata.forEach(function(a) {
+    if (!aitimaMap[a.epafi_id]) aitimaMap[a.epafi_id] = [];
+    aitimaMap[a.epafi_id].push((a.imerominia || '') + ' | ' + (a.perigrafi || '') + ' | ' + (a.katastasi || '') + (a.apotelesma ? ' - ' + a.apotelesma : '') + (a.xeiristis ? ' [' + a.xeiristis + ']' : ''));
+  });
+
+  var cols = ['eponimo','onoma','dimos','kinitopoiitis_1','kinitopoiitis_2','kinito_1','kinito_2','stathero_1','stathero_2','stathero_3','email','dieuthinsi','registration_year','idiotita','stasi','last_contact','do_not_contact','edose_lista','ekane_synkentrose','ilthen_synkentrose','xronia_synkentrose','gnorizo_prosopika','geniko_sxolio'];
+  var headers = ['Επώνυμο','Όνομα','Δήμος','Κινητοποιητής 1','Κινητοποιητής 2','Κινητό 1','Κινητό 2','Σταθερό 1','Σταθερό 2','Σταθερό 3','Email','Διεύθυνση','Έτος εγγραφής','Ιδιότητα','Στάση','Τελ. Επαφή','Απαγόρευση','Έδωσε λίστα','Έκανε συγκέντρωση','Ήρθε σε συγκέντρωση','Χρονιά συγκέντρωσης','Γνωρίζω προσωπικά','Γενικό σχόλιο','Ιστορικό επαφών','Αιτήματα'];
+
+  function esc(v) { return '"' + (v || '').toString().replace(/"/g, '""') + '"'; }
+
+  var rows = filtered.map(function(r) {
+    var base = cols.map(function(c) {
+      var v = r[c];
+      if (typeof v === 'boolean') v = v ? 'Ναι' : 'Όχι';
+      return esc(v);
+    });
+    var hist = esc((historikoMap[r.id] || []).join(' | '));
+    var ait = esc((aitimaMap[r.id] || []).join(' || '));
+    return base.concat([hist, ait]).join(',');
+  });
+
+  var csv = [headers.map(esc).join(',')].concat(rows).join('\n');
   var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'crm_export_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
@@ -1035,6 +1079,8 @@ function exportGiortes() {
 
 
 // AITIMATA
+var aitimaCache = {};
+
 async function loadAitimata(epafi_id) {
   var res = await db.from('aitimata').select('*').eq('epafi_id', epafi_id).order('imerominia', {ascending: false});
   var div = document.getElementById('dAitimata');
@@ -1042,6 +1088,8 @@ async function loadAitimata(epafi_id) {
     div.innerHTML = '<p style="font-size:12px;color:var(--text3);">Δεν υπάρχουν αιτήματα ακόμα.</p>';
     return;
   }
+  // Store in cache for edit access
+  res.data.forEach(function(a) { aitimaCache[a.id] = a; });
   div.innerHTML = res.data.map(function(a) {
     var badgeCls = a.katastasi === 'Σε εξέλιξη' ? 'badge-exelixi' :
       a.apotelesma === 'Επιτυχές' ? 'badge-ekleise-ok' : 'badge-ekleise-no';
@@ -1052,7 +1100,7 @@ async function loadAitimata(epafi_id) {
         '<span style="font-size:11px;color:var(--text3);">' + (a.imerominia || '') + '</span>' +
         '<div style="display:flex;align-items:center;gap:6px;">' +
           '<span class="aitima-badge ' + badgeCls + '">' + badgeText + '</span>' +
-          '<button onclick="openEditAitima(' + JSON.stringify(a).replace(/'/g,"\\'") + ')" style="background:none;border:1px solid var(--border2);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text2);cursor:pointer;">✏️</button>' +
+          '<button data-aitima-id="' + a.id + '" onclick="openEditAitimaById(this.dataset.aitimaId)" style="background:none;border:1px solid var(--border2);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text2);cursor:pointer;">✏️</button>' +
         '</div>' +
       '</div>' +
       '<div class="aitima-desc">' + (a.perigrafi || '') + '</div>' +
@@ -1085,15 +1133,10 @@ function openEditAitima(a) {
   document.getElementById('aitimaModal').classList.add('open');
 }
 
-function openEditAitima(a) {
-  editingAitimaId = a.id;
-  document.getElementById('aitimaModalTitle').textContent = 'Επεξεργασία Αιτήματος';
-  document.getElementById('aPerigrafi').value = a.perigrafi || '';
-  document.getElementById('aKatastasi').value = a.katastasi || 'Σε εξέλιξη';
-  document.getElementById('aApotelesma').value = a.apotelesma || '';
-  document.getElementById('aImerominia').value = a.imerominia || '';
-  document.getElementById('aXeiristis').value = a.xeiristis || '';
-  document.getElementById('aitimaModal').classList.add('open');
+function openEditAitimaById(id) {
+  var a = aitimaCache[id];
+  if (!a) return;
+  openEditAitima(a);
 }
 
 async function saveAitima() {
